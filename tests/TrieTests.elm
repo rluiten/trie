@@ -10,20 +10,20 @@ import Trie exposing (Trie(..))
 tests : Test
 tests =
     suite "DocTrie tests"
-      [ addTest1
-      , addTest2
-      , hasTest1
-      , hasTest2
-      , hasTest3
-      , getTest1
-      , getTest2
-      , expandTest1
-      , removeTest1
+      [ addTest1 ()
+      , addTest2 ()
+      , hasTest1 ()
+      , hasTest2 ()
+      , hasTest3 ()
+      , getTest1 ()
+      , getTest2 ()
+      , expandTest1 ()
+      , removeTest1 ()
       ]
 
 
-addTest1 : Test
-addTest1 =
+addTest1 : () -> Test
+addTest1 _ =
     test "add test 1"
       <| assertEqual Trie.empty EmptyTrie
 
@@ -45,8 +45,8 @@ doc1 =
     }
 
 
-addTest2 : Test
-addTest2 =
+addTest2 : () -> Test
+addTest2 _ =
     let
       trieU1 = Trie.add ("refid123", doc1) "ab" Trie.empty
       -- _ = Debug.log("addtest2 1") (trieU1)
@@ -63,16 +63,16 @@ addTest2 =
         ]
 
 
-hasTest1 : Test
-hasTest1 =
+hasTest1 : () -> Test
+hasTest1 _ =
     test "has test 1"
       <| assert
       <| not
       <| Trie.has "ab" EmptyTrie
 
 
-hasTest2 : Test
-hasTest2 =
+hasTest2 : () ->  Test
+hasTest2 _ =
     let
       trieU1 = Trie.add ("refid123", doc1) "ab" Trie.empty
     in
@@ -81,16 +81,16 @@ hasTest2 =
         <| Trie.has "ab" trieU1
 
 
-hasTest3 : Test
-hasTest3 =
+hasTest3 : () -> Test
+hasTest3 _ =
     test "has test 3"
       <| assert
       <| not
       <| Trie.has "" EmptyTrie
 
 
-getTest1 : Test
-getTest1 =
+getTest1 : () -> Test
+getTest1 _ =
     let
       trie1 = Trie.getNode "ab" EmptyTrie
       trie2 = Trie.getNode "" EmptyTrie
@@ -105,8 +105,8 @@ getTest1 =
         ]
 
 
-getTest2 : Test
-getTest2 =
+getTest2 : () -> Test
+getTest2 _ =
     let
       trieU1 = Trie.add ("refid123", doc1) "ab" Trie.empty
       trie1 = Trie.getNode "a" trieU1
@@ -125,8 +125,8 @@ getTest2 =
             <| trie3 == Nothing
         ]
 
-expandTest1 : Test
-expandTest1 =
+expandTest1 : () -> Test
+expandTest1 _ =
     let
         trieU1 = Trie.add ("refid121", 1) "ab" Trie.empty
         trieU2 = Trie.add ("refid122", 2) "ac" trieU1
@@ -158,8 +158,8 @@ expandTest1 =
         ]
 
 
-removeTest1 : Test
-removeTest1 =
+removeTest1 : () -> Test
+removeTest1 _ =
     let
         trieU1 = Trie.add ("refid121", 1) "ab" Trie.empty
         trieU2 = Trie.add ("refid122", 2) "ac" trieU1
