@@ -4,7 +4,8 @@ import Dict
 import ElmTest exposing (..)
 import Set
 
-import Trie exposing (Trie(..))
+import Trie
+import TrieModel  exposing (Trie (EmptyTrie))
 
 
 tests : Test

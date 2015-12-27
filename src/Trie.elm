@@ -1,5 +1,5 @@
 module Trie
-  ( Trie(..)
+  ( Trie
   , empty
   , add
   , remove
@@ -12,8 +12,6 @@ module Trie
   ) where
 
 {-| A Trie data structure.
-
-Copyright (c) 2016 Robin Luiten
 
 A trie is an ordered tree data structure that is used to store a dynamic
 set or associative array where the keys are usually strings.
@@ -43,6 +41,7 @@ dictionary for a given key is a String.
 ## Get data values from node
 @docs getValues
 
+Copyright (c) 2016 Robin Luiten
 -}
 
 import Dict exposing (Dict)
@@ -51,18 +50,15 @@ import Maybe exposing (withDefault, andThen)
 import String
 
 
-{-| Trie data model definition.
--}
-type Trie a
-    = EmptyTrie
-    | ValNode (Dict String a)
-    | TrieNode (Dict Char (Trie a))
-    | ValTrieNode (Dict String a) (Dict Char (Trie a))
+import TrieModel
 
+
+{-| Trie data model. -}
+type alias Trie a = TrieModel.Trie a
 
 {-| An empty Trie -}
 empty : Trie a
-empty = EmptyTrie
+empty = TrieModel.empty
 
 
 {-| Returns True if Trie is empty -}
@@ -78,58 +74,16 @@ updatedTrie = Trie.add ("refid123", ("ValueStored", 42.34)) "someword" Trie.empt
 ```
 -}
 add : (String, a) -> String -> Trie a -> Trie a
-add refValues key trie =
-    addByChars refValues (String.toList key) trie
+add = TrieModel.add
 
 
-{-| see add
--}
-addByChars : (String, a) -> List Char -> Trie a -> Trie a
-addByChars (ref, value) key trie =
-    case key of
-      [] ->
-        case trie of
-          EmptyTrie ->
-            ValNode (Dict.singleton ref value)
+{- break string up into list of single Char strings -}
+toListString : String -> List String
+toListString str =
+    List.map
+      (\c -> String.fromChar c)
+      (String.toList str)
 
-          ValNode refValues ->
-            ValNode (Dict.insert ref value  refValues)
-
-          TrieNode trieDict ->
-            ValTrieNode (Dict.singleton ref value) trieDict
-
-          ValTrieNode refValues trieDict ->
-            ValTrieNode (Dict.insert ref value  refValues) trieDict
-
-      keyHead :: keyTail ->
-        let
-          lazyNewTrieDict =
-              (\_ ->
-                addByChars (ref, value) keyTail EmptyTrie
-                  |> Dict.singleton keyHead
-              )
-
-          updateTrieDict trieDict =
-            let
-              updatedSubTrie =
-                Dict.get keyHead trieDict
-                  |> withDefault EmptyTrie
-                  |> addByChars (ref, value) keyTail
-            in
-              Dict.insert keyHead updatedSubTrie trieDict
-        in
-          case trie of
-            EmptyTrie ->
-              TrieNode (lazyNewTrieDict ())
-
-            ValNode refValues ->
-              ValTrieNode refValues (lazyNewTrieDict ())
-
-            TrieNode trieDict ->
-              TrieNode (updateTrieDict trieDict)
-
-            ValTrieNode refValues trieDict ->
-              ValTrieNode refValues (updateTrieDict trieDict)
 
 {-| Remove values for key and reference from Trie.
 
@@ -152,51 +106,8 @@ trie2 = Trie.remove "someword" "refid123" Trie.trie1
 
 -}
 remove : String -> String -> Trie a -> Trie a
-remove key ref trie =
-    removeByChars (String.toList key) ref trie
+remove = TrieModel.remove
 
-
-{-| see remove
--}
-removeByChars : List Char -> String -> Trie a -> Trie a
-removeByChars key ref trie =
-    case key of
-      [] ->
-        case trie of
-          EmptyTrie ->
-            trie
-
-          ValNode refValues ->
-            ValNode (Dict.remove ref refValues)
-
-          TrieNode trieDict ->
-            trie
-
-          ValTrieNode refValues trieDict ->
-            ValTrieNode (Dict.remove ref refValues) trieDict
-
-      keyHead :: keyTail ->
-        let
-          removeTrieDict trieDict =
-              case (Dict.get keyHead trieDict) of
-                Nothing ->
-                  trieDict
-
-                Just subTrie ->
-                  Dict.insert keyHead (removeByChars keyTail ref subTrie) trieDict
-        in
-          case trie of
-            EmptyTrie ->
-              trie
-
-            ValNode refValues ->
-              trie
-
-            TrieNode trieDict ->
-              TrieNode (removeTrieDict trieDict)
-
-            ValTrieNode refValues trieDict ->
-              ValTrieNode refValues (removeTrieDict trieDict)
 
 {-| Return Trie node if found.
 
@@ -215,44 +126,7 @@ maybeNode = Trie.getNode "someword" trie1
 
 -}
 getNode : String -> Trie a -> Maybe (Trie a)
-getNode key trie =
-    getNodeByChars (String.toList key) trie
-
-
-{-| see getNode
--}
-getNodeByChars : List Char -> Trie a -> Maybe (Trie a)
-getNodeByChars key trie =
-    if List.isEmpty key then
-      Nothing
-    else
-      getNodeCore key trie
-
-
-getNodeCore : List Char -> Trie a -> Maybe (Trie a)
-getNodeCore key trie =
-    case key of
-      [] ->
-        Just trie
-
-      keyHead :: keyTail ->
-        let
-          getTrie trieDict =
-            (Dict.get keyHead trieDict) `andThen`
-              (getNodeCore keyTail)
-        in
-          case trie of
-            EmptyTrie ->
-              Nothing
-
-            ValNode _ ->
-              Nothing
-
-            TrieNode trieDict ->
-              getTrie trieDict
-
-            ValTrieNode _ trieDict ->
-              getTrie trieDict
+getNode = TrieModel.getNode
 
 
 {-| Checks whether key is contained within a Trie.
@@ -260,63 +134,25 @@ getNodeCore key trie =
 A key must have values for it be considered present in Trie.
 -}
 has : String -> Trie a -> Bool
-has key trie =
-    hasByChars (String.toList key) trie
-
-
-{-| see has
--}
-hasByChars : List Char -> Trie a -> Bool
-hasByChars key trie =
-    (getNodeByChars key trie) `andThen` getValues
-      |> withDefault Dict.empty
-      |> not << Dict.isEmpty
+has = TrieModel.has
 
 
 {-| Return values for a key if found.
 -}
 get : String -> Trie a -> Maybe (Dict String a)
-get key trie =
-    getByChars (String.toList key) trie
-
-
-{-| see get
--}
-getByChars : List Char -> Trie a -> Maybe (Dict String a)
-getByChars key trie =
-    (getNodeByChars key trie) `andThen` getValues
+get = TrieModel.get
 
 
 {-| Return the values stored if there are any
 -}
 getValues : Trie a -> Maybe (Dict String a)
-getValues trie =
-    case trie of
-      EmptyTrie ->
-        Nothing
-
-      ValNode refValues ->
-        Just refValues
-
-      TrieNode _ ->
-        Nothing
-
-      ValTrieNode refValues _ ->
-        Just refValues
+getValues = TrieModel.getValues
 
 
 {-| Return number of values stored at Trie location.
 -}
 valueCount : String -> Trie a -> Int
-valueCount key trie =
-    Dict.size (withDefault Dict.empty (get key trie))
-
-
-{-| see valueCount
--}
-valueCountByChars : List Char -> Trie a -> Int
-valueCountByChars key trie =
-    Dict.size (withDefault Dict.empty (getByChars key trie))
+valueCount = TrieModel.valueCount
 
 
 {-| Find all the possible suffixes of the passed key using keys
@@ -353,45 +189,4 @@ Returns
 
 -}
 expand : String -> Trie a-> List String
-expand key trie =
-    expandByChars (String.toList key) trie
-
-
-{-| see expand
--}
-expandByChars : List Char -> Trie a -> List String
-expandByChars key trie  =
-    case getNodeByChars key trie of
-      Nothing ->
-        []
-
-      Just keyTrie ->
-        expandCore key keyTrie []
-
-
-expandCore : List Char -> Trie a -> List String -> List String
-expandCore key trie keyList =
-    let
-      addRefKey refValues =
-        if not (Dict.isEmpty refValues) then
-          (String.fromList key) :: keyList
-        else
-          keyList
-      expandSub char trie foldList =
-        expandCore (key ++ [ char ]) trie foldList
-    in
-      case trie of
-        EmptyTrie ->
-          keyList
-
-        ValNode refValues ->
-          addRefKey refValues
-
-        TrieNode trieDict ->
-          Dict.foldr expandSub keyList trieDict
-
-        ValTrieNode refValues trieDict ->
-          let
-            dirtyList = addRefKey refValues
-          in
-            Dict.foldr expandSub dirtyList trieDict
+expand = TrieModel.expand
