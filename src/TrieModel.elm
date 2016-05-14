@@ -1,4 +1,4 @@
-module TrieModel
+module TrieModel exposing
   ( Trie(..)
   , empty
   , add
@@ -9,7 +9,7 @@ module TrieModel
   , valueCount
   , expand
   , getValues
-  ) where
+  )
 
 {-| A Trie data structure.
 
@@ -58,12 +58,6 @@ type Trie a
     | ValNode (Dict String a)
     | TrieNode (Dict String (Trie a))
     | ValTrieNode (Dict String a, Dict String (Trie a))
-
-
-{-| Exposed opaque Trie data model. -}
---type alias Trie = TrieModel.Trie
-
-
 
 
 {-| An empty Trie -}

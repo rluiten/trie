@@ -1,4 +1,4 @@
-module TrieCodecTests where
+module TrieCodecTests exposing (..)
 
 {-| Test Trie encoder and decoder -}
 

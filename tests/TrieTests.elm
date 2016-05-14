@@ -1,4 +1,4 @@
-module TrieTests where
+module TrieTests exposing (..)
 
 import Dict
 import ElmTest exposing (..)

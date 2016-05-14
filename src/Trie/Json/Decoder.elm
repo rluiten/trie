@@ -1,4 +1,4 @@
-module Trie.Json.Decoder (decoder) where
+module Trie.Json.Decoder exposing (decoder)
 
 {-| Json Decoder for Trie
 

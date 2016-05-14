@@ -1,4 +1,4 @@
-module Trie
+module Trie exposing
   ( Trie
   , empty
   , add
@@ -9,7 +9,7 @@ module Trie
   , valueCount
   , expand
   , getValues
-  ) where
+  )
 
 {-| A Trie data structure.
 
