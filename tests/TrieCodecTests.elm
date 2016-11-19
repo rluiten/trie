@@ -3,11 +3,12 @@ module TrieCodecTests exposing (..)
 {-| Test Trie encoder and decoder -}
 
 import Dict exposing ( Dict )
-import ElmTest exposing (..)
+import Expect
 import Json.Encode as Encode
 import Json.Decode exposing (..)
 import Set
 import String
+import Test exposing (..)
 
 import Trie
 import TrieModel exposing (Trie (EmptyTrie))
@@ -17,7 +18,7 @@ import Trie.Json.Decoder as TrieDecoder
 
 tests : Test
 tests =
-    suite "Trie encode tests"
+    describe "Trie encode tests"
       [ encodeEmptyTrieTest ()
       , encodeTrieTest ()
       , decodeEmptyTrieTest ()
@@ -40,8 +41,9 @@ encodeTrieTest _ =
       _ = Debug.log ("readable2 ") (encodedTrie)
       _ = Debug.log ("readable2 ") (trie3)
     in
-      test "encode a trie"
-        <| assertEqual
+      test "encode a trie" <|
+        \() ->
+          Expect.equal
             exampleEncodedTrie3
             encodedTrie
 
@@ -52,7 +54,7 @@ encodeEmptyTrieTest _ =
       str = Encode.encode 0 (TrieEncoder.encoder Encode.float EmptyTrie)
     in
       test "encode am EmptyTrie" <|
-        assertEqual "null" str
+        \() -> Expect.equal "null" str
 
 
 decodeEmptyTrieTest _ =
@@ -61,8 +63,7 @@ decodeEmptyTrieTest _ =
       result = decodeString (TrieDecoder.decoder float) "null"
     in
       test "encode am EmptyTrie" <|
-        -- assertEqual (Err "a") result
-        assertEqual (Ok EmptyTrie) result
+        \() -> Expect.equal (Ok EmptyTrie) result
 
 
 {-
@@ -73,7 +74,9 @@ Therefore decode then encode back to string to check its same.
 -}
 decodeTrieTest1 _ =
     let
-      resultTrie = decodeString (TrieDecoder.decoder float) exampleEncodedTrie3
+      resultTrie =
+        Debug.log "Moo1" <|
+          decodeString (TrieDecoder.decoder float) exampleEncodedTrie3
       resultStr = Result.map
         (\decodedTrie ->
           Encode.encode 0 (TrieEncoder.encoder Encode.float decodedTrie)
@@ -81,4 +84,4 @@ decodeTrieTest1 _ =
         resultTrie
     in
       test "decode back to example3" <|
-        assertEqual (Ok exampleEncodedTrie3) resultStr
+        \() -> Expect.equal (Ok exampleEncodedTrie3) resultStr
