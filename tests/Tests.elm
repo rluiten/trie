@@ -1,8 +1,8 @@
-module Tests exposing (..)
+module Tests exposing (all)
 
 import Test exposing (..)
-import TrieTests
 import TrieCodecTests
+import TrieTests
 
 
 all : Test

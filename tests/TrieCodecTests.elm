@@ -1,19 +1,19 @@
-module TrieCodecTests exposing (..)
+module TrieCodecTests exposing (decodeEmptyTrieTest, decodeTrieTest1, encodeEmptyTrieTest, encodeTrieTest, exampleEncodedTrie3, tests, trie1, trie2, trie3)
 
 {-| Test Trie encoder and decoder
 -}
 
 import Dict exposing (Dict)
 import Expect
-import Json.Encode as Encode
 import Json.Decode exposing (..)
+import Json.Encode as Encode
 import Set
 import String
 import Test exposing (..)
 import Trie
-import TrieModel exposing (Trie(EmptyTrie))
-import Trie.Json.Encoder as TrieEncoder
 import Trie.Json.Decoder as TrieDecoder
+import Trie.Json.Encoder as TrieEncoder
+import TrieModel exposing (Trie(..))
 
 
 tests : Test
@@ -48,16 +48,16 @@ encodeTrieTest _ =
             Encode.encode 0 (TrieEncoder.encoder Encode.float trie3)
 
         _ =
-            Debug.log ("readable2 ") (encodedTrie)
+            Debug.log "readable2 " encodedTrie
 
         _ =
-            Debug.log ("readable2 ") (trie3)
+            Debug.log "readable2 " trie3
     in
-        test "encode a trie" <|
-            \() ->
-                Expect.equal
-                    exampleEncodedTrie3
-                    encodedTrie
+    test "encode a trie" <|
+        \() ->
+            Expect.equal
+                exampleEncodedTrie3
+                encodedTrie
 
 
 encodeEmptyTrieTest _ =
@@ -66,8 +66,8 @@ encodeEmptyTrieTest _ =
         str =
             Encode.encode 0 (TrieEncoder.encoder Encode.float EmptyTrie)
     in
-        test "encode am EmptyTrie" <|
-            \() -> Expect.equal "null" str
+    test "encode am EmptyTrie 1" <|
+        \() -> Expect.equal "null" str
 
 
 decodeEmptyTrieTest _ =
@@ -78,8 +78,8 @@ decodeEmptyTrieTest _ =
         result =
             decodeString (TrieDecoder.decoder float) "null"
     in
-        test "encode am EmptyTrie" <|
-            \() -> Expect.equal (Ok EmptyTrie) result
+    test "encode am EmptyTrie 2" <|
+        \() -> Expect.equal (Ok EmptyTrie) result
 
 
 
@@ -104,5 +104,5 @@ decodeTrieTest1 _ =
                 )
                 resultTrie
     in
-        test "decode back to example3" <|
-            \() -> Expect.equal (Ok exampleEncodedTrie3) resultStr
+    test "decode back to example3" <|
+        \() -> Expect.equal (Ok exampleEncodedTrie3) resultStr

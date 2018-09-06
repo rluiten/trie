@@ -1,16 +1,15 @@
-module TrieModel
-    exposing
-        ( Trie(..)
-        , empty
-        , add
-        , remove
-        , has
-        , get
-        , getNode
-        , valueCount
-        , expand
-        , getValues
-        )
+module TrieModel exposing
+    ( Trie(..)
+    , empty
+    , add
+    , remove
+    , has
+    , get
+    , getNode
+    , valueCount
+    , expand
+    , getValues
+    )
 
 {-| A Trie data structure.
 
@@ -52,7 +51,7 @@ dictionary for a given key is a String.
 
 @docs getValues
 
-Copyright (c) 2017 Robin Luiten
+Copyright (c) 2015 Robin Luiten
 
 -}
 
@@ -60,6 +59,7 @@ import Dict exposing (Dict)
 import List
 import Maybe
 import String
+
 
 
 -- import TrieModel
@@ -128,10 +128,9 @@ addByStr ( ref, value ) key trie =
         keyHead :: keyTail ->
             let
                 lazyNewTrieDict =
-                    (\_ ->
+                    \_ ->
                         addByStr ( ref, value ) keyTail EmptyTrie
                             |> Dict.singleton keyHead
-                    )
 
                 updateTrieDict trieDict =
                     let
@@ -140,20 +139,20 @@ addByStr ( ref, value ) key trie =
                                 |> Maybe.withDefault EmptyTrie
                                 |> addByStr ( ref, value ) keyTail
                     in
-                        Dict.insert keyHead updatedSubTrie trieDict
+                    Dict.insert keyHead updatedSubTrie trieDict
             in
-                case trie of
-                    EmptyTrie ->
-                        TrieNode (lazyNewTrieDict ())
+            case trie of
+                EmptyTrie ->
+                    TrieNode (lazyNewTrieDict ())
 
-                    ValNode refValues ->
-                        ValTrieNode ( refValues, lazyNewTrieDict () )
+                ValNode refValues ->
+                    ValTrieNode ( refValues, lazyNewTrieDict () )
 
-                    TrieNode trieDict ->
-                        TrieNode (updateTrieDict trieDict)
+                TrieNode trieDict ->
+                    TrieNode (updateTrieDict trieDict)
 
-                    ValTrieNode ( refValues, trieDict ) ->
-                        ValTrieNode ( refValues, updateTrieDict trieDict )
+                ValTrieNode ( refValues, trieDict ) ->
+                    ValTrieNode ( refValues, updateTrieDict trieDict )
 
 
 {-| Remove values for key and reference from Trie.
@@ -203,25 +202,25 @@ removeByStr key ref trie =
         keyHead :: keyTail ->
             let
                 removeTrieDict trieDict =
-                    case (Dict.get keyHead trieDict) of
+                    case Dict.get keyHead trieDict of
                         Nothing ->
                             trieDict
 
                         Just subTrie ->
                             Dict.insert keyHead (removeByStr keyTail ref subTrie) trieDict
             in
-                case trie of
-                    EmptyTrie ->
-                        trie
+            case trie of
+                EmptyTrie ->
+                    trie
 
-                    ValNode refValues ->
-                        trie
+                ValNode refValues ->
+                    trie
 
-                    TrieNode trieDict ->
-                        TrieNode (removeTrieDict trieDict)
+                TrieNode trieDict ->
+                    TrieNode (removeTrieDict trieDict)
 
-                    ValTrieNode ( refValues, trieDict ) ->
-                        ValTrieNode ( refValues, removeTrieDict trieDict )
+                ValTrieNode ( refValues, trieDict ) ->
+                    ValTrieNode ( refValues, removeTrieDict trieDict )
 
 
 {-| Return Trie node if found.
@@ -237,6 +236,7 @@ getNodeByStr : List String -> Trie a -> Maybe (Trie a)
 getNodeByStr key trie =
     if List.isEmpty key then
         Nothing
+
     else
         getNodeCore key trie
 
@@ -250,21 +250,21 @@ getNodeCore key trie =
         keyHead :: keyTail ->
             let
                 getTrie trieDict =
-                    (Dict.get keyHead trieDict)
+                    Dict.get keyHead trieDict
                         |> Maybe.andThen (getNodeCore keyTail)
             in
-                case trie of
-                    EmptyTrie ->
-                        Nothing
+            case trie of
+                EmptyTrie ->
+                    Nothing
 
-                    ValNode _ ->
-                        Nothing
+                ValNode _ ->
+                    Nothing
 
-                    TrieNode trieDict ->
-                        getTrie trieDict
+                TrieNode trieDict ->
+                    getTrie trieDict
 
-                    ValTrieNode ( _, trieDict ) ->
-                        getTrie trieDict
+                ValTrieNode ( _, trieDict ) ->
+                    getTrie trieDict
 
 
 {-| Checks whether key is contained within a Trie.
@@ -278,7 +278,7 @@ has key trie =
 -}
 hasByStr : List String -> Trie a -> Bool
 hasByStr key trie =
-    (getNodeByStr key trie)
+    getNodeByStr key trie
         |> Maybe.andThen getValues
         |> Maybe.withDefault Dict.empty
         |> not
@@ -296,7 +296,7 @@ get key trie =
 -}
 getByStr : List String -> Trie a -> Maybe (Dict String a)
 getByStr key trie =
-    (getNodeByStr key trie)
+    getNodeByStr key trie
         |> Maybe.andThen getValues
 
 
@@ -359,26 +359,27 @@ expandCore key trie keyList =
         addRefKey refValues =
             if not (Dict.isEmpty refValues) then
                 -- (String.fromList key) :: keyList
-                (String.concat key) :: keyList
+                String.concat key :: keyList
+
             else
                 keyList
 
-        expandSub char trie foldList =
-            expandCore (key ++ [ char ]) trie foldList
+        expandSub char trie1 foldList =
+            expandCore (key ++ [ char ]) trie1 foldList
     in
-        case trie of
-            EmptyTrie ->
-                keyList
+    case trie of
+        EmptyTrie ->
+            keyList
 
-            ValNode refValues ->
-                addRefKey refValues
+        ValNode refValues ->
+            addRefKey refValues
 
-            TrieNode trieDict ->
-                Dict.foldr expandSub keyList trieDict
+        TrieNode trieDict ->
+            Dict.foldr expandSub keyList trieDict
 
-            ValTrieNode ( refValues, trieDict ) ->
-                let
-                    dirtyList =
-                        addRefKey refValues
-                in
-                    Dict.foldr expandSub dirtyList trieDict
+        ValTrieNode ( refValues, trieDict ) ->
+            let
+                dirtyList =
+                    addRefKey refValues
+            in
+            Dict.foldr expandSub dirtyList trieDict

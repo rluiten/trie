@@ -4,7 +4,7 @@ module Trie.Json.Decoder exposing (decoder)
 
 @docs decoder
 
-Copyright (c) 2017 Robin Luiten
+Copyright (c) 2015 Robin Luiten
 
 -}
 
@@ -46,6 +46,6 @@ decoderTrieDict valDec =
 
 decoderValTrieNode : Decode.Decoder a -> Decode.Decoder ( Dict String a, Dict String (Trie a) )
 decoderValTrieNode valDec =
-    Decode.map2 (,)
+    Decode.map2 Tuple.pair
         (Decode.index 0 (decoderValDict valDec))
         (Decode.index 1 (decoderTrieDict valDec))

@@ -1,16 +1,15 @@
-module Trie
-    exposing
-        ( Trie
-        , empty
-        , add
-        , remove
-        , has
-        , get
-        , getNode
-        , valueCount
-        , expand
-        , getValues
-        )
+module Trie exposing
+    ( Trie
+    , empty
+    , add
+    , remove
+    , has
+    , get
+    , getNode
+    , valueCount
+    , expand
+    , getValues
+    )
 
 {-| A Trie data structure.
 
@@ -52,13 +51,13 @@ dictionary for a given key is a String.
 
 @docs getValues
 
-Copyright (c) 2017 Robin Luiten
+Copyright (c) 2015 Robin Luiten
 
 -}
 
 import Dict exposing (Dict)
 import List
-import Maybe exposing (withDefault, andThen)
+import Maybe exposing (andThen, withDefault)
 import String
 import TrieModel
 
@@ -94,10 +93,8 @@ add =
     TrieModel.add
 
 
-
-{- break string up into list of single Char strings -}
-
-
+{-| break string up into list of single Char strings
+-}
 toListString : String -> List String
 toListString str =
     List.map
@@ -201,7 +198,7 @@ This
 
 Returns
 
-    ["ab","acd","ac"]
+    [ "ab", "acd", "ac" ]
 
 This
 
@@ -209,7 +206,7 @@ This
 
 Returns
 
-    ["acd","ac"]
+    [ "acd", "ac" ]
 
 -}
 expand : String -> Trie a -> List String

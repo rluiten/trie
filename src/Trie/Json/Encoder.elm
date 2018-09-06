@@ -4,7 +4,7 @@ module Trie.Json.Encoder exposing (encoder)
 
 @docs encoder
 
-Copyright (c) 2017 Robin Luiten
+Copyright (c) 2015 Robin Luiten
 
 -}
 
@@ -37,24 +37,22 @@ encoder valEnc trie =
                 encodedDict =
                     encoderTrieDict valEnc trieDict
             in
-                Encode.list [ encodedValues, encodedDict ]
+            Encode.list identity [ encodedValues, encodedDict ]
 
 
 {-| Encode the Dict of Value references.
 -}
 encoderValDict : (f -> Encode.Value) -> Dict String f -> Encode.Value
 encoderValDict valEnc refValues =
-    Encode.object <|
-        List.map
-            (\( key, val ) -> ( key, valEnc val ))
-            (Dict.toList refValues)
+    Dict.toList refValues
+        |> List.map (\( key, val ) -> ( key, valEnc val ))
+        |> Encode.object
 
 
 {-| Encode the core Trie structure Dict.
 -}
 encoderTrieDict : (f -> Encode.Value) -> Dict String (Trie f) -> Encode.Value
 encoderTrieDict valEnc trieDict =
-    Encode.object <|
-        List.map
-            (\( key, val ) -> ( key, encoder valEnc val ))
-            (Dict.toList trieDict)
+    Dict.toList trieDict
+        |> List.map (\( key, val ) -> ( key, encoder valEnc val ))
+        |> Encode.object

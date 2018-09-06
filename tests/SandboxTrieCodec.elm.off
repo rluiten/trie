@@ -1,0 +1,228 @@
+module SandboxTrieCodec exposing (Trie(..), decode, decodeTrie, decodeTrieDict, decodeValDict, decodeValTrieNode, encode, encodeTrieDict, encodeValDict, encodedExample1, example1, expectedJsonEncodedExample1, jsonEncodedExample1, lazyDecode, main)
+
+{-| Single file sandbox with Trie for Encoder Decoder.
+I think I have an encoder going, stuck on Decoder blowing call stack.
+I might be stuck stuck on Decoder because I made poor choices on the encoder.
+-}
+
+import Dict exposing (Dict)
+import Graphics.Element exposing (show)
+import Json.Decode as Decode exposing (Decoder)
+import Json.Encode as Encode
+import String
+
+
+{-| Trie data model definition.
+
+Observation learned while trying out stuff.
+
+It is actually not a valid Trie if it starts witha ValNode - can't happen
+as an output of `Trie.add`
+
+-}
+type Trie a
+    = EmptyTrie
+    | ValNode (Dict String a)
+    | TrieNode (Dict String (Trie a))
+    | ValTrieNode ( Dict String a, Dict String (Trie a) )
+
+
+
+{- example1 is equivalent of.
+   trie1 = Trie.add ("id001", 23.4) "Ho" Trie.empty
+   trie2 = Trie.add ("id002", 21.4) "Ho" trie1
+   trie3 = Trie.add ("id003", 28.4) "H" trie2
+-}
+
+
+example1 =
+    TrieNode
+        (Dict.fromList
+            [ ( "H"
+              , ValTrieNode
+                    ( Dict.fromList
+                        [ ( "id003", 28.4 )
+                        ]
+                    , Dict.fromList
+                        [ ( "o"
+                          , ValNode
+                                (Dict.fromList
+                                    [ ( "id001", 23.4 )
+                                    , ( "id002", 21.4 )
+                                    ]
+                                )
+                          )
+                        ]
+                    )
+              )
+            ]
+        )
+
+
+encodedExample1 =
+    encode Encode.float example1
+
+
+jsonEncodedExample1 =
+    Encode.encode 0 encodedExample1
+
+
+expectedJsonEncodedExample1 =
+    "{\"H\":[{\"id003\":28.4},{\"o\":{\"id001\":23.4,\"id002\":21.4}}]}"
+
+
+main =
+    let
+        _ =
+            Debug.log "encodedExample1"
+                encodedExample1
+
+        _ =
+            Debug.log "jsonExample1               "
+                jsonEncodedExample1
+
+        _ =
+            Debug.log "expectedJsonEncodedExample1"
+                expectedJsonEncodedExample1
+
+        _ =
+            Debug.log "expected is same           "
+                (jsonEncodedExample1 == expectedJsonEncodedExample1)
+
+        _ =
+            Debug.log "null decode test           "
+                (Decode.decodeString (decode Decode.float) "null")
+
+        _ =
+            Debug.log "just val dict decode      "
+                (Decode.decodeString (decodeValDict Decode.float) "{\"id001\":23.4,\"id002\":21.4}")
+
+        _ =
+            Debug.log "just trie dict decode      "
+                (Decode.decodeString (decodeTrieDict Decode.float) "{\"o\":{\"id001\":23.4,\"id002\":21.4}}")
+
+        _ =
+            Debug.log "decodedFromJsonExample1    "
+                (Decode.decodeString (decode Decode.float) expectedJsonEncodedExample1)
+    in
+    show
+        jsonEncodedExample1
+
+
+
+-- from gdotdesign on elmlang.slack.com
+-- bug decoding recursive structures at moment. https://github.com/elm-lang/elm-compiler/issues/873
+-- fixed the stack issues, not sure i understand why... was called "lazy" originally
+
+
+lazyDecode : (() -> Decode.Decoder a) -> Decode.Decoder a
+lazyDecode thunk =
+    Decode.customDecoder Decode.value
+        (\js -> Decode.decodeValue (thunk ()) js)
+
+
+
+{- a Trie Decoder -}
+
+
+decode : Decoder a -> Decoder (Trie a)
+decode valDec =
+    Decode.oneOf
+        [ Decode.null EmptyTrie
+        , decodeTrie valDec
+        ]
+
+
+decodeTrie : Decoder a -> Decoder (Trie a)
+decodeTrie valDec =
+    Decode.oneOf
+        [ Decode.map ValNode (decodeValDict valDec)
+        , Decode.map TrieNode (lazyDecode (\_ -> decodeTrieDict valDec))
+        , Decode.map ValTrieNode (lazyDecode (\_ -> decodeValTrieNode valDec))
+        , Decode.fail "Invalid Trie Structure found"
+        ]
+
+
+
+--                         | ValNode ( Dict String a )
+
+
+decodeValDict : Decoder a -> Decoder (Dict String a)
+decodeValDict =
+    Decode.dict
+
+
+
+--                         | TrieNode ( Dict String (Trie a) )
+
+
+decodeTrieDict : Decoder a -> Decoder (Dict String (Trie a))
+
+
+
+-- decodeTrieDict valDec = Decode.dict (decode valDec) -- was
+
+
+decodeTrieDict valDec =
+    Decode.dict (decode valDec)
+
+
+
+--                         | ValTrieNode ( Dict String a, Dict String (Trie a) )
+
+
+decodeValTrieNode : Decoder a -> Decoder ( Dict String a, Dict String (Trie a) )
+decodeValTrieNode valDec =
+    Decode.tuple2 (,)
+        (decodeValDict valDec)
+        (decodeTrieDict valDec)
+
+
+
+{- a Trie Encoder -}
+
+
+encode : (f -> Encode.Value) -> Trie f -> Encode.Value
+encode valEnc trie =
+    case trie of
+        EmptyTrie ->
+            Encode.null
+
+        -- | ValNode ( Dict String a )
+        ValNode refValues ->
+            encodeValDict valEnc refValues
+
+        -- | TrieNode ( Dict String (Trie a) )
+        TrieNode trieDict ->
+            encodeTrieDict valEnc trieDict
+
+        -- | ValTrieNode ( Dict String a, Dict String (Trie a) )
+        ValTrieNode ( refValues, trieDict ) ->
+            let
+                encodedValues =
+                    encodeValDict valEnc refValues
+
+                encodedDict =
+                    encodeTrieDict valEnc trieDict
+            in
+            Encode.list [ encodedValues, encodedDict ]
+
+
+{-| Encode the Dict of document references and tf score.
+-}
+encodeValDict : (f -> Encode.Value) -> Dict String f -> Encode.Value
+encodeValDict valEnc refValues =
+    Encode.object <|
+        List.map
+            (\( key, val ) -> ( key, valEnc val ))
+            (Dict.toList refValues)
+
+
+{-| Encode the core Trie structure Dict.
+-}
+encodeTrieDict : (f -> Encode.Value) -> Dict String (Trie f) -> Encode.Value
+encodeTrieDict valEnc trieDict =
+    Encode.object <|
+        List.map
+            (\( key, val ) -> ( key, encode valEnc val ))
+            (Dict.toList trieDict)

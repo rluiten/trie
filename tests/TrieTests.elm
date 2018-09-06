@@ -1,11 +1,11 @@
-module TrieTests exposing (..)
+module TrieTests exposing (MyDoc, addTest1, addTest2, doc1, expandTest1, getTest1, getTest2, hasTest1, hasTest2, hasTest3, removeTest1, tests)
 
 import Dict
 import Expect
-import Test exposing (..)
 import Set
+import Test exposing (..)
 import Trie
-import TrieModel exposing (Trie(EmptyTrie))
+import TrieModel exposing (Trie(..))
 
 
 tests : Test
@@ -58,21 +58,21 @@ addTest2 _ =
 
         -- _ = Debug.log("addtest2 2") (trieU2)
     in
-        describe "add test 2"
-            [ test "a" <|
-                \() -> Expect.notEqual EmptyTrie trieU1
-            , test "b" <|
-                \() -> Expect.notEqual EmptyTrie trieU2
-            , test "c" <|
-                \() -> Expect.notEqual trieU1 trieU2
-            ]
+    describe "add test 2"
+        [ test "a" <|
+            \() -> Expect.notEqual EmptyTrie trieU1
+        , test "b" <|
+            \() -> Expect.notEqual EmptyTrie trieU2
+        , test "c" <|
+            \() -> Expect.notEqual trieU1 trieU2
+        ]
 
 
 hasTest1 : () -> Test
 hasTest1 _ =
     test "EmptyTrie does not have \"ab\"" <|
         \() ->
-            (Trie.has "ab" EmptyTrie)
+            Trie.has "ab" EmptyTrie
                 |> Expect.false "EmptyTree should not contain any token."
 
 
@@ -82,17 +82,17 @@ hasTest2 _ =
         trieU1 =
             Trie.add ( "refid123", doc1 ) "ab" Trie.empty
     in
-        test "Created trie has \"ab\"" <|
-            \() ->
-                (Trie.has "ab" trieU1)
-                    |> Expect.true "Trie created with token should contain it"
+    test "Created trie has \"ab\"" <|
+        \() ->
+            Trie.has "ab" trieU1
+                |> Expect.true "Trie created with token should contain it"
 
 
 hasTest3 : () -> Test
 hasTest3 _ =
     test "EmptyTrie does not have \"\"" <|
         \() ->
-            (Trie.has "" EmptyTrie)
+            Trie.has "" EmptyTrie
                 |> Expect.false "EmptyTree does not even contain empty string."
 
 
@@ -105,12 +105,12 @@ getTest1 _ =
         trie2 =
             Trie.getNode "" EmptyTrie
     in
-        describe "get test 1"
-            [ test "get \"ab\" from EmptyTree is Nothing" <|
-                \() -> Expect.equal trie1 Nothing
-            , test "get \"\" from EmptyTree is Nothing" <|
-                \() -> Expect.equal trie2 Nothing
-            ]
+    describe "get test 1"
+        [ test "get \"ab\" from EmptyTree is Nothing" <|
+            \() -> Expect.equal trie1 Nothing
+        , test "get \"\" from EmptyTree is Nothing" <|
+            \() -> Expect.equal trie2 Nothing
+        ]
 
 
 getTest2 : () -> Test
@@ -128,14 +128,14 @@ getTest2 _ =
         trie3 =
             Trie.getNode "abc" trieU1
     in
-        describe "get test 2"
-            [ test "get \"a\" from trieU1 is not Nothing" <|
-                \() -> Expect.notEqual trie1 Nothing
-            , test "get \"ab\" from trieU1 is not Nothing" <|
-                \() -> Expect.notEqual trie2 Nothing
-            , test "get \"abc\" from trieU1 is Nothing" <|
-                \() -> Expect.equal trie3 Nothing
-            ]
+    describe "get test 2"
+        [ test "get \"a\" from trieU1 is not Nothing" <|
+            \() -> Expect.notEqual trie1 Nothing
+        , test "get \"ab\" from trieU1 is not Nothing" <|
+            \() -> Expect.notEqual trie2 Nothing
+        , test "get \"abc\" from trieU1 is Nothing" <|
+            \() -> Expect.equal trie3 Nothing
+        ]
 
 
 expandTest1 : () -> Test
@@ -178,20 +178,20 @@ expandTest1 _ =
         setBounce list =
             Set.toList (Set.fromList list)
     in
-        describe "expand test 1"
-            [ test "expand \"a\"" <|
-                \() -> (Expect.equal [ "ab", "acd", "ac" ] tokens1)
-            , test "expand \"ac\"" <|
-                \() -> (Expect.equal [ "acd", "ac" ] tokens2)
-            , test "expand \"\"" <|
-                \() -> (Expect.equal [] tokens3)
-            , test "expand \"b\"" <|
-                \() -> (Expect.equal [] tokens4)
-            , test "expand \"f\"" <|
-                \() -> (Expect.equal (setBounce [ "for", "forward" ]) (setBounce tokens5))
-            , test "expand \"for\"" <|
-                \() -> (Expect.equal (setBounce [ "for", "forward" ]) (setBounce tokens5))
-            ]
+    describe "expand test 1"
+        [ test "expand \"a\"" <|
+            \() -> Expect.equal [ "ab", "acd", "ac" ] tokens1
+        , test "expand \"ac\"" <|
+            \() -> Expect.equal [ "acd", "ac" ] tokens2
+        , test "expand \"\"" <|
+            \() -> Expect.equal [] tokens3
+        , test "expand \"b\"" <|
+            \() -> Expect.equal [] tokens4
+        , test "expand \"f\"" <|
+            \() -> Expect.equal (setBounce [ "for", "forward" ]) (setBounce tokens5)
+        , test "expand \"for\"" <|
+            \() -> Expect.equal (setBounce [ "for", "forward" ]) (setBounce tokens5)
+        ]
 
 
 removeTest1 : () -> Test
@@ -222,17 +222,17 @@ removeTest1 _ =
         -- _ = Debug.log("removeTest1 c2 has") (Trie.has "for" (Trie.remove "for" "refid124" trieU5))
         -- _ = Debug.log("removeTest1 d rem") (Trie.remove "for" "refid124" trieU5)
     in
-        describe "remove test 1"
-            [ test "remove token but doc reference wrong, so does not change trie" <|
-                \() ->
-                    (Trie.has "for" (Trie.remove "for" "refid125" trieU5))
-                        |> Expect.true "Removing token with non wrong document reference does not remove it."
-            , test "remove token with right doc reference" <|
-                \() ->
-                    (Trie.has "for" (Trie.remove "for" "refid124" trieU5))
-                        |> Expect.false "Removing token with correct doc reference does remove it."
-            , test "remove token with right doc reference" <|
-                \() ->
-                    (Trie.has "forward" (Trie.remove "forward" "refid125" trieU5))
-                        |> Expect.false "Removing token with correct doc reference does remove it."
-            ]
+    describe "remove test 1"
+        [ test "remove token but doc reference wrong, so does not change trie" <|
+            \() ->
+                Trie.has "for" (Trie.remove "for" "refid125" trieU5)
+                    |> Expect.true "Removing token with non wrong document reference does not remove it."
+        , test "remove token with right doc reference 1" <|
+            \() ->
+                Trie.has "for" (Trie.remove "for" "refid124" trieU5)
+                    |> Expect.false "Removing token with correct doc reference does remove it."
+        , test "remove token with right doc reference 2" <|
+            \() ->
+                Trie.has "forward" (Trie.remove "forward" "refid125" trieU5)
+                    |> Expect.false "Removing token with correct doc reference does remove it."
+        ]
