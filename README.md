@@ -11,10 +11,10 @@ In this implementation the keys are strings.
 
 As of Sunday 2015/12/27 Json encoder and decoder have been added to this package.
 
-To improve Encoder and Decoer parts of data model have changed.
-Have also removed exposing the Constructors of Trie, they were accidently exposed
-previously, hope this is not a big problem for anyone, it was intended to be
-an opaque type.
+To improve the Encoder and the Decoder, parts of data model have changed.
+The release also removed the exposed Constructors of Trie as they were accidently exposed
+previously and the Trie was intended to be
+an opaque type. Hope this is not a big problem for anyone!
 
 ## Testing
 
