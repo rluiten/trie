@@ -1,14 +1,20 @@
-module TrieCodecTests exposing (decodeEmptyTrieTest, decodeTrieTest1, encodeEmptyTrieTest, encodeTrieTest, exampleEncodedTrie3, tests, trie1, trie2, trie3)
+module TrieCodecTests exposing
+    ( decodeEmptyTrieTest
+    , decodeTrieTest1
+    , encodeEmptyTrieTest
+    , encodeTrieTest
+    , exampleEncodedTrie3
+    , trie1
+    , trie2
+    , trie3
+    )
 
 {-| Test Trie encoder and decoder
 -}
 
-import Dict exposing (Dict)
 import Expect
 import Json.Decode exposing (..)
 import Json.Encode as Encode
-import Set
-import String
 import Test exposing (..)
 import Trie
 import Trie.Json.Decoder as TrieDecoder
@@ -16,42 +22,37 @@ import Trie.Json.Encoder as TrieEncoder
 import TrieModel exposing (Trie(..))
 
 
-tests : Test
-tests =
-    describe "Trie encode tests"
-        [ encodeEmptyTrieTest ()
-        , encodeTrieTest ()
-        , decodeEmptyTrieTest ()
-        , decodeTrieTest1 ()
-        ]
-
-
+trie1 : Trie.Trie Float
 trie1 =
     Trie.add ( "id001", 23.4 ) "Hello" Trie.empty
 
 
+trie2 : Trie.Trie Float
 trie2 =
     Trie.add ( "id002", 21.4 ) "Hello" trie1
 
 
+trie3 : Trie.Trie Float
 trie3 =
     Trie.add ( "id003", 28.4 ) "Hell" trie2
 
 
+exampleEncodedTrie3 : String
 exampleEncodedTrie3 =
     "{\"H\":{\"e\":{\"l\":{\"l\":[{\"id003\":28.4},{\"o\":{\"id001\":23.4,\"id002\":21.4}}]}}}}"
 
 
-encodeTrieTest _ =
+encodeTrieTest : Test
+encodeTrieTest =
     let
         encodedTrie =
             Encode.encode 0 (TrieEncoder.encoder Encode.float trie3)
 
-        _ =
-            Debug.log "readable2 " encodedTrie
-
-        _ =
-            Debug.log "readable2 " trie3
+        -- _ =
+        --     Debug.log "readable2 " encodedTrie
+        --
+        -- _ =
+        --     Debug.log "readable2 " trie3
     in
     test "encode a trie" <|
         \() ->
@@ -60,9 +61,9 @@ encodeTrieTest _ =
                 encodedTrie
 
 
-encodeEmptyTrieTest _ =
+encodeEmptyTrieTest : Test
+encodeEmptyTrieTest =
     let
-        str : String
         str =
             Encode.encode 0 (TrieEncoder.encoder Encode.float EmptyTrie)
     in
@@ -70,16 +71,14 @@ encodeEmptyTrieTest _ =
         \() -> Expect.equal "null" str
 
 
-decodeEmptyTrieTest _ =
+decodeEmptyTrieTest : Test
+decodeEmptyTrieTest =
     let
-        a =
-            1
-
-        result =
+        result1 =
             decodeString (TrieDecoder.decoder float) "null"
     in
     test "encode am EmptyTrie 2" <|
-        \() -> Expect.equal (Ok EmptyTrie) result
+        \() -> Expect.equal (Ok EmptyTrie) result1
 
 
 
@@ -91,10 +90,11 @@ decodeEmptyTrieTest _ =
 -}
 
 
-decodeTrieTest1 _ =
+decodeTrieTest1 : Test
+decodeTrieTest1 =
     let
         resultTrie =
-            Debug.log "Moo1" <|
+            -- Debug.log "Moo1" <|
                 decodeString (TrieDecoder.decoder float) exampleEncodedTrie3
 
         resultStr =

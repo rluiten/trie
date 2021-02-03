@@ -8,6 +8,7 @@ module Trie exposing
     , getNode
     , valueCount
     , expand
+    , isEmpty
     , getValues
     )
 
@@ -45,6 +46,7 @@ dictionary for a given key is a String.
 @docs getNode
 @docs valueCount
 @docs expand
+@docs isEmpty
 
 
 ## Get data values from node
@@ -56,9 +58,6 @@ Copyright (c) 2015 Robin Luiten
 -}
 
 import Dict exposing (Dict)
-import List
-import Maybe exposing (andThen, withDefault)
-import String
 import TrieModel
 
 
@@ -93,15 +92,6 @@ add =
     TrieModel.add
 
 
-{-| break string up into list of single Char strings
--}
-toListString : String -> List String
-toListString str =
-    List.map
-        (\c -> String.fromChar c)
-        (String.toList str)
-
-
 {-| Remove values for key and reference from Trie.
 
 This removes the reference from the correct values list.
@@ -113,13 +103,15 @@ An example but does not do anything.
     updatedTrie =
         Trie.remove "for" "refid125" Trie.empty
 
-Add something then remove it.
+An example that adds something then removes it.
 
     trie1 =
         Trie.add ( "refid123", ( "ValueStored", 42.34 ) ) "someword" Trie.empty
 
     trie2 =
         Trie.remove "someword" "refid123" Trie.trie1
+
+If you remove all references you add the trie will become empty again.
 
 -}
 remove : String -> String -> Trie a -> Trie a
@@ -134,7 +126,7 @@ This will return Nothing.
     maybeNode =
         Trie.getNode "for" Trie.empty
 
-This will the node containing the values for the word "someword".
+This will return the node containing the values for the word "someword".
 It will contains "refid123" in the dictionary point at ("ValueStored", 42.34).
 
     trie1 =

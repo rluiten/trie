@@ -8,6 +8,7 @@ module TrieModel exposing
     , getNode
     , valueCount
     , expand
+    , isEmpty
     , getValues
     )
 
@@ -45,6 +46,7 @@ dictionary for a given key is a String.
 @docs getNode
 @docs valueCount
 @docs expand
+@docs isEmpty
 
 
 ## Get data values from node
@@ -58,11 +60,8 @@ Copyright (c) 2015 Robin Luiten
 import Dict exposing (Dict)
 import List
 import Maybe
+import MaybeExtra
 import String
-
-
-
--- import TrieModel
 
 
 {-| Trie data model.
@@ -92,15 +91,13 @@ isEmpty trie =
 -}
 add : ( String, a ) -> String -> Trie a -> Trie a
 add refValues key trie =
-    addByStr refValues (toListString key) trie
+    addByStr refValues (toChars key) trie
 
 
-
-{- break string up into list of single Char strings -}
-
-
-toListString : String -> List String
-toListString str =
+{-| break string up into list of single Char strings
+-}
+toChars : String -> List String
+toChars str =
     List.map
         (\c -> String.fromChar c)
         (String.toList str)
@@ -126,33 +123,35 @@ addByStr ( ref, value ) key trie =
                     ValTrieNode ( Dict.insert ref value refValues, trieDict )
 
         keyHead :: keyTail ->
-            let
-                lazyNewTrieDict =
-                    \_ ->
-                        addByStr ( ref, value ) keyTail EmptyTrie
-                            |> Dict.singleton keyHead
-
-                updateTrieDict trieDict =
-                    let
-                        updatedSubTrie =
-                            Dict.get keyHead trieDict
-                                |> Maybe.withDefault EmptyTrie
-                                |> addByStr ( ref, value ) keyTail
-                    in
-                    Dict.insert keyHead updatedSubTrie trieDict
-            in
             case trie of
                 EmptyTrie ->
-                    TrieNode (lazyNewTrieDict ())
+                    TrieNode (createTrieDict keyHead keyTail ref value)
 
                 ValNode refValues ->
-                    ValTrieNode ( refValues, lazyNewTrieDict () )
+                    ValTrieNode ( refValues, createTrieDict keyHead keyTail ref value )
 
                 TrieNode trieDict ->
-                    TrieNode (updateTrieDict trieDict)
+                    TrieNode (updateTrieDict keyHead keyTail ref value trieDict)
 
                 ValTrieNode ( refValues, trieDict ) ->
-                    ValTrieNode ( refValues, updateTrieDict trieDict )
+                    ValTrieNode ( refValues, updateTrieDict keyHead keyTail ref value trieDict )
+
+
+createTrieDict : comparable -> List String -> String -> d -> Dict comparable (Trie d)
+createTrieDict keyHead keyTail ref value =
+    EmptyTrie
+        |> addByStr ( ref, value ) keyTail
+        |> Dict.singleton keyHead
+
+
+updateTrieDict : comparable -> List String -> String -> d -> Dict comparable (Trie d) -> Dict comparable (Trie d)
+updateTrieDict keyHead keyTail ref value trieDict =
+    Dict.insert keyHead
+        (Dict.get keyHead trieDict
+            |> Maybe.withDefault EmptyTrie
+            |> addByStr ( ref, value ) keyTail
+        )
+        trieDict
 
 
 {-| Remove values for key and reference from Trie.
@@ -177,68 +176,124 @@ Add something then remove it.
 -}
 remove : String -> String -> Trie a -> Trie a
 remove key ref trie =
-    removeByStr (toListString key) ref trie
+    removeByChars (toChars key) ref (Just trie)
+        |> Maybe.withDefault EmptyTrie
 
 
-{-| see remove
+{-| Create Maybe of Dictionary returning Nothing if empty dictionary.
 -}
-removeByStr : List String -> String -> Trie a -> Trie a
-removeByStr key ref trie =
+filterNonEmptyDict : Dict String a -> Maybe (Dict String a)
+filterNonEmptyDict dict =
+    if Dict.isEmpty dict then
+        Nothing
+
+    else
+        Just dict
+
+
+{-| New variant that returns Nothing if removed value leaves empty.
+-}
+removeByChars : List String -> String -> Maybe (Trie a) -> Maybe (Trie a)
+removeByChars key ref trie =
     case key of
         [] ->
-            case trie of
-                EmptyTrie ->
-                    trie
-
-                ValNode refValues ->
-                    ValNode (Dict.remove ref refValues)
-
-                TrieNode trieDict ->
-                    trie
-
-                ValTrieNode ( refValues, trieDict ) ->
-                    ValTrieNode ( Dict.remove ref refValues, trieDict )
+            Maybe.andThen (removeFromTrieLeaf ref) trie
 
         keyHead :: keyTail ->
-            let
-                removeTrieDict trieDict =
-                    case Dict.get keyHead trieDict of
-                        Nothing ->
-                            trieDict
+            Maybe.andThen (removeFromTrie keyHead keyTail ref) trie
 
-                        Just subTrie ->
-                            Dict.insert keyHead (removeByStr keyTail ref subTrie) trieDict
-            in
-            case trie of
-                EmptyTrie ->
-                    trie
 
-                ValNode refValues ->
-                    trie
+{-| Remove the ref document from any values containers.
+This function is for use when you have found the node.
 
-                TrieNode trieDict ->
-                    TrieNode (removeTrieDict trieDict)
+Returns Nothing if trie becomes empty from removal.
 
-                ValTrieNode ( refValues, trieDict ) ->
-                    ValTrieNode ( refValues, removeTrieDict trieDict )
+Can't easilly use getNodeCore because it has to update
+parent nodes if a sub tree becomes empty
+
+-}
+removeFromTrieLeaf : String -> Trie a -> Maybe (Trie a)
+removeFromTrieLeaf ref aTrie =
+    case aTrie of
+        EmptyTrie ->
+            Nothing
+
+        ValNode valuesDict ->
+            -- optimisation return same aTrie if not in dictValues
+            if Dict.member ref valuesDict then
+                Dict.remove ref valuesDict
+                    |> filterNonEmptyDict
+                    |> Maybe.map (\r -> ValNode r)
+
+            else
+                Just aTrie
+
+        TrieNode _ ->
+            Just aTrie
+
+        ValTrieNode ( valuesDict, trieDict ) ->
+            -- optimisation return same aTrie if not in dictValues
+            if Dict.member ref valuesDict then
+                Dict.remove ref valuesDict
+                    |> filterNonEmptyDict
+                    |> Maybe.map (\values -> ValTrieNode ( values, trieDict ))
+                    |> Maybe.withDefault (TrieNode trieDict)
+                    |> Just
+
+            else
+                Just aTrie
+
+
+{-| Remove the reference from any values in trie.
+Returns Nothing if the trie becomes empty from removal.
+-}
+removeFromTrie : String -> List String -> String -> Trie a -> Maybe (Trie a)
+removeFromTrie keyHead keyTail ref aTrie =
+    case aTrie of
+        EmptyTrie ->
+            Nothing
+
+        ValNode _ ->
+            Just aTrie
+
+        TrieNode trieDict ->
+            removeFromTrieDict keyHead keyTail ref trieDict
+                |> Maybe.map (\d2 -> TrieNode d2)
+
+        ValTrieNode ( refValues, trieDict ) ->
+            removeFromTrieDict keyHead keyTail ref trieDict
+                |> Maybe.map (\d2 -> ValTrieNode ( refValues, d2 ))
+                |> Maybe.withDefault (ValNode refValues)
+                |> Just
+
+
+{-| Recursive remove the ref document from trie on given keyHead keyTail sequence.
+-}
+removeFromTrieDict : String -> List String -> String -> Dict String (Trie a) -> Maybe (Dict String (Trie a))
+removeFromTrieDict keyHead keyTail ref trieDict =
+    case Dict.get keyHead trieDict of
+        Nothing ->
+            Just trieDict
+
+        justTrie ->
+            removeByChars keyTail ref justTrie
+                |> MaybeExtra.filter (isEmpty >> not)
+                |> Maybe.map (\a -> Dict.insert keyHead a trieDict)
 
 
 {-| Return Trie node if found.
 -}
 getNode : String -> Trie a -> Maybe (Trie a)
 getNode key trie =
-    getNodeByStr (toListString key) trie
+    getNodeByStr (toChars key) trie
 
 
-{-| see getNode
+{-| see getNode, better version?
 -}
 getNodeByStr : List String -> Trie a -> Maybe (Trie a)
 getNodeByStr key trie =
-    if List.isEmpty key then
-        Nothing
-
-    else
-        getNodeCore key trie
+    MaybeExtra.filtered (List.isEmpty >> not) key
+        |> Maybe.andThen (\k -> getNodeCore k trie)
 
 
 getNodeCore : List String -> Trie a -> Maybe (Trie a)
@@ -248,30 +303,16 @@ getNodeCore key trie =
             Just trie
 
         keyHead :: keyTail ->
-            let
-                getTrie trieDict =
-                    Dict.get keyHead trieDict
-                        |> Maybe.andThen (getNodeCore keyTail)
-            in
-            case trie of
-                EmptyTrie ->
-                    Nothing
-
-                ValNode _ ->
-                    Nothing
-
-                TrieNode trieDict ->
-                    getTrie trieDict
-
-                ValTrieNode ( _, trieDict ) ->
-                    getTrie trieDict
+            getTrieDict trie
+                |> Maybe.andThen (Dict.get keyHead)
+                |> Maybe.andThen (getNodeCore keyTail)
 
 
 {-| Checks whether key is contained within a Trie.
 -}
 has : String -> Trie a -> Bool
 has key trie =
-    hasByStr (toListString key) trie
+    hasByStr (toChars key) trie
 
 
 {-| see has
@@ -281,15 +322,14 @@ hasByStr key trie =
     getNodeByStr key trie
         |> Maybe.andThen getValues
         |> Maybe.withDefault Dict.empty
-        |> not
-        << Dict.isEmpty
+        |> (Dict.isEmpty >> not)
 
 
 {-| Return values for a key if found.
 -}
 get : String -> Trie a -> Maybe (Dict String a)
 get key trie =
-    getByStr (toListString key) trie
+    getByStr (toChars key) trie
 
 
 {-| see get
@@ -300,7 +340,25 @@ getByStr key trie =
         |> Maybe.andThen getValues
 
 
-{-| Return the values stored if there are any
+{-| Return the tree dict in this Trie node if there is one
+-}
+getTrieDict : Trie a -> Maybe (Dict String (Trie a))
+getTrieDict trie =
+    case trie of
+        EmptyTrie ->
+            Nothing
+
+        ValNode _ ->
+            Nothing
+
+        TrieNode trieDict ->
+            Just trieDict
+
+        ValTrieNode ( _, trieDict ) ->
+            Just trieDict
+
+
+{-| Return the values in this Trie node if there is one
 -}
 getValues : Trie a -> Maybe (Dict String a)
 getValues trie =
@@ -325,20 +383,12 @@ valueCount key trie =
     Dict.size (Maybe.withDefault Dict.empty (get key trie))
 
 
-{-| see valueCount
--}
-valueCountByStr : List String -> Trie a -> Int
-valueCountByStr key trie =
-    Maybe.withDefault Dict.empty (getByStr key trie)
-        |> Dict.size
-
-
 {-| Find all the possible suffixes of the passed key using keys
 currently in the store.
 -}
 expand : String -> Trie a -> List String
 expand key trie =
-    expandByStr (toListString key) trie
+    expandByStr (toChars key) trie
 
 
 {-| see expand
@@ -358,7 +408,6 @@ expandCore key trie keyList =
     let
         addRefKey refValues =
             if not (Dict.isEmpty refValues) then
-                -- (String.fromList key) :: keyList
                 String.concat key :: keyList
 
             else

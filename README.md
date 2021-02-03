@@ -9,23 +9,35 @@ set or associative array where the keys are usually strings.
 
 In this implementation the keys are strings.
 
-As of Sunday 2015/12/27 Json encoder and decoder have been added to this package.
+## History
 
-To improve the Encoder and the Decoder, parts of data model have changed.
-The release also removed the exposed Constructors of Trie as they were accidently exposed
-previously and the Trie was intended to be
-an opaque type. Hope this is not a big problem for anyone!
+### 2021/02/03
+
+The Trie.remove cleans up left over nodes with no held values. This did not affect my usage but it surprised me so I fixed it.
+
+Added "isEmpty" to api of Trie.
+
+### 2015/12/27
+
+As of Sunday Json encoder and decoder have been added to this package.
+
+To improve Encoder and Decoder parts of data model have changed.
+Have also removed exposing the Constructors of Trie, they were accidentally exposed
+previously, hope this is not a big problem for anyone, it was intended to be
+an opaque type.
+
+Also updated the tests to use a more common test pattern.
 
 ## Testing
 
-This uses elm-test for testing so install it if you dont have it.
+This uses elm-test for testing so install it if you don't have it.
 
 To see tests look at TrieTest.elm and TrieCodecTests.elm in tests folder.
 
-* npm install -g elm-test
+- npm install -g elm-test
 
 To run Tests
 
-* elm-test
+- elm-test
 
 Copyright (c) 2015 Robin Luiten
