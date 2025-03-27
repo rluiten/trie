@@ -79,7 +79,8 @@ hasTest1 =
         \() ->
             EmptyTrie
                 |> Trie.has "ab"
-                |> Expect.false "EmptyTree should not contain any token."
+                |> Expect.equal False
+                |> Expect.onFail "EmptyTree should not contain any token."
 
 
 hasTest2 : () -> Test
@@ -89,7 +90,8 @@ hasTest2 _ =
             Trie.empty
                 |> Trie.add ( "refid123", doc1 ) "ab"
                 |> Trie.has "ab"
-                |> Expect.true "Trie created with token should contain it"
+                |> Expect.equal True
+                |> Expect.onFail "Trie created with token should contain it"
 
 
 hasTest3 : () -> Test
@@ -98,7 +100,8 @@ hasTest3 _ =
         \() ->
             EmptyTrie
                 |> Trie.has ""
-                |> Expect.false "EmptyTree does not even contain empty string."
+                |> Expect.equal False
+                |> Expect.onFail "EmptyTree does not even contain empty string."
 
 
 getTest1 : Test
@@ -211,19 +214,22 @@ removeTest1 =
                 testTrie
                     |> Trie.remove "for" "refid125"
                     |> Trie.has "for"
-                    |> Expect.true "Removing token with wrong document reference does not remove it."
+                    |> Expect.equal True
+                    |> Expect.onFail "Removing token with wrong document reference does not remove it."
         , test "remove token with right doc reference 1" <|
             \() ->
                 testTrie
                     |> Trie.remove "for" "refid124"
                     |> Trie.has "for"
-                    |> Expect.false "Removing token with correct doc reference does remove it."
+                    |> Expect.equal False
+                    |> Expect.onFail "Removing token with correct doc reference does remove it."
         , test "remove token with right doc reference 2" <|
             \() ->
                 testTrie
                     |> Trie.remove "forward" "refid125"
                     |> Trie.has "forward"
-                    |> Expect.false "Removing token with correct doc reference does remove it."
+                    |> Expect.equal False
+                    |> Expect.onFail "Removing token with correct doc reference does remove it."
         ]
 
 
@@ -234,7 +240,8 @@ removeOnAnEmptyTrieReturnsEmpty =
             Trie.empty
                 |> Trie.remove "anything" "anything2"
                 |> Trie.isEmpty
-                |> Expect.true "Removing from empty returns empty"
+                |> Expect.equal True
+                |> Expect.onFail "Removing from empty returns empty"
 
 
 isEmptyAfterRemovingTheOnlyRef : Test
@@ -245,7 +252,8 @@ isEmptyAfterRemovingTheOnlyRef =
                 |> Trie.add ( "refid121", ( 1, 2 ) ) "ab"
                 |> Trie.remove "ab" "refid121"
                 |> Trie.isEmpty
-                |> Expect.true "Should be an empty tree."
+                |> Expect.equal True
+                |> Expect.onFail "Should be an empty tree."
 
 
 expandDoesNotOutputAKeyForRemovedReference : Test
