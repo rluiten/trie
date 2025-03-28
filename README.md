@@ -1,6 +1,6 @@
 ## Trie implementation
 
-Copyright (c) 2015 Robin Luiten
+Copyright (c) 2025 Robin Luiten
 
 An implementation of a Trie data structure.
 
@@ -10,6 +10,11 @@ set or associative array where the keys are usually strings.
 In this implementation the keys are strings.
 
 ## History
+
+### 2025/03/25
+
+Seoius bug in Trie.remove it would throw away other nodes in some cases when removing a key in the Trie.
+Flaw uncovered by a bug report in elm-text-search.
 
 ### 2021/02/03
 
@@ -40,4 +45,4 @@ To run Tests
 
 - elm-test
 
-Copyright (c) 2015 Robin Luiten
+Copyright (c) 2025 Robin Luiten

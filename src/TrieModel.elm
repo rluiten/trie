@@ -65,6 +65,13 @@ import String
 
 
 {-| Trie data model.
+
+    type Trie a
+        = EmptyTrie
+        | ValNode (Dict String a)
+        | TrieNode (Dict String (Trie a))
+        | ValTrieNode ( Dict String a, Dict String (Trie a) )
+
 -}
 type Trie a
     = EmptyTrie
@@ -131,10 +138,10 @@ addByStr ( ref, value ) key trie =
                     ValTrieNode ( refValues, createTrieDict keyHead keyTail ref value )
 
                 TrieNode trieDict ->
-                    TrieNode (updateTrieDict keyHead keyTail ref value trieDict)
+                    TrieNode (updateAddTrieDict keyHead keyTail ref value trieDict)
 
                 ValTrieNode ( refValues, trieDict ) ->
-                    ValTrieNode ( refValues, updateTrieDict keyHead keyTail ref value trieDict )
+                    ValTrieNode ( refValues, updateAddTrieDict keyHead keyTail ref value trieDict )
 
 
 createTrieDict : comparable -> List String -> String -> d -> Dict comparable (Trie d)
@@ -144,8 +151,8 @@ createTrieDict keyHead keyTail ref value =
         |> Dict.singleton keyHead
 
 
-updateTrieDict : comparable -> List String -> String -> d -> Dict comparable (Trie d) -> Dict comparable (Trie d)
-updateTrieDict keyHead keyTail ref value trieDict =
+updateAddTrieDict : comparable -> List String -> String -> d -> Dict comparable (Trie d) -> Dict comparable (Trie d)
+updateAddTrieDict keyHead keyTail ref value trieDict =
     Dict.insert keyHead
         (Dict.get keyHead trieDict
             |> Maybe.withDefault EmptyTrie
@@ -156,9 +163,9 @@ updateTrieDict keyHead keyTail ref value trieDict =
 
 {-| Remove values for key and reference from Trie.
 
-This removes the reference from the correct values list.
-If the key does not exist nothing changes.
-If the ref is not found in the values for the key nothing changes.
+Return the same trie if no changes required.
+Idempotent if a key or ref is not in tree no change happens same trie returned
+You can check trie instance value against original if you want to know if trie changed.
 
 An example but does not do anything.
 
@@ -176,109 +183,141 @@ Add something then remove it.
 -}
 remove : String -> String -> Trie a -> Trie a
 remove key ref trie =
-    removeByChars (toChars key) ref (Just trie)
-        |> Maybe.withDefault EmptyTrie
+    remove_ (toChars key) ref trie
 
 
-{-| Create Maybe of Dictionary returning Nothing if empty dictionary.
+{-| Remove the ref at key in trie.
+
+This is recursive.
+Return the same trie if no changes were made.
+Reasons for this might be key not found or ref not found.
+
 -}
-filterNonEmptyDict : Dict String a -> Maybe (Dict String a)
-filterNonEmptyDict dict =
-    if Dict.isEmpty dict then
-        Nothing
+remove_ : List String -> String -> Trie a -> Trie a
+remove_ key ref trie =
+    let
+        --| remove and update only happen if newChildTrie /= childTrie
+        updateRemoveTrieDict :
+            Dict comparable (Trie a)
+            -> comparable
+            -> List String
+            -> Trie a
+            -> (Dict comparable (Trie a) -> Trie a)
+            -> (Trie a -> Dict comparable (Trie a) -> Trie a)
+            -> Trie a
+        updateRemoveTrieDict =
+            \trieDict head tail noDictNode removeChildFunc replaceChildFunc ->
+                case Dict.get head trieDict of
+                    -- can't find head the next part of key nothing changes
+                    Nothing ->
+                        trie
 
-    else
-        Just dict
+                    Just childTrie ->
+                        let
+                            newChildTrie =
+                                remove_ tail ref childTrie
+                        in
+                        if newChildTrie == childTrie then
+                            -- as i didnt find key match nothing changes
+                            trie
 
+                        else if newChildTrie == EmptyTrie then
+                            if Dict.size trieDict == 1 then
+                                noDictNode
 
-{-| New variant that returns Nothing if removed value leaves empty.
--}
-removeByChars : List String -> String -> Maybe (Trie a) -> Maybe (Trie a)
-removeByChars key ref trie =
+                            else
+                                removeChildFunc trieDict
+
+                        else
+                            replaceChildFunc newChildTrie trieDict
+    in
     case key of
         [] ->
-            Maybe.andThen (removeFromTrieLeaf ref) trie
+            -- end of tree only have ref in vals to care about
+            let
+                removeValForKey : Dict String a -> Trie a -> (Dict String a -> Trie a) -> Trie a
+                removeValForKey =
+                    \vals noValsNode valsFunc ->
+                        let
+                            newVals =
+                                Dict.remove ref vals
+                        in
+                        if newVals == vals then
+                            trie
 
-        keyHead :: keyTail ->
-            Maybe.andThen (removeFromTrie keyHead keyTail ref) trie
+                        else if Dict.size newVals == 0 then
+                            noValsNode
 
+                        else
+                            valsFunc newVals
+            in
+            case trie of
+                EmptyTrie ->
+                    EmptyTrie
 
-{-| Remove the ref document from any values containers.
-This function is for use when you have found the node.
+                ValNode vals ->
+                    removeValForKey vals EmptyTrie (\newVals -> ValNode newVals)
 
-Returns Nothing if trie becomes empty from removal.
+                TrieNode _ ->
+                    trie
 
-Can't easilly use getNodeCore because it has to update
-parent nodes if a sub tree becomes empty
+                ValTrieNode ( vals, trieDict ) ->
+                    removeValForKey vals (TrieNode trieDict) (\newVals -> ValTrieNode ( newVals, trieDict ))
 
--}
-removeFromTrieLeaf : String -> Trie a -> Maybe (Trie a)
-removeFromTrieLeaf ref aTrie =
-    case aTrie of
-        EmptyTrie ->
-            Nothing
+        head :: [] ->
+            -- the childTrie if found by head may contain ref in vals
+            case trie of
+                EmptyTrie ->
+                    EmptyTrie
 
-        ValNode valuesDict ->
-            -- optimisation return same aTrie if not in dictValues
-            if Dict.member ref valuesDict then
-                Dict.remove ref valuesDict
-                    |> filterNonEmptyDict
-                    |> Maybe.map (\r -> ValNode r)
+                ValNode _ ->
+                    trie
 
-            else
-                Just aTrie
+                TrieNode trieDict ->
+                    -- in this case childTrie may contain the reference
+                    updateRemoveTrieDict
+                        trieDict
+                        head
+                        []
+                        EmptyTrie
+                        (\trieDict2 -> TrieNode (Dict.remove head trieDict2))
+                        (\newChildTrie trieDict2 -> TrieNode (Dict.insert head newChildTrie trieDict2))
 
-        TrieNode _ ->
-            Just aTrie
+                ValTrieNode ( vals, trieDict ) ->
+                    updateRemoveTrieDict
+                        trieDict
+                        head
+                        []
+                        (ValNode vals)
+                        (\trieDict2 -> ValTrieNode ( vals, Dict.remove head trieDict2 ))
+                        (\newChildTrie trieDict2 -> ValTrieNode ( vals, Dict.insert head newChildTrie trieDict2 ))
 
-        ValTrieNode ( valuesDict, trieDict ) ->
-            -- optimisation return same aTrie if not in dictValues
-            if Dict.member ref valuesDict then
-                Dict.remove ref valuesDict
-                    |> filterNonEmptyDict
-                    |> Maybe.map (\values -> ValTrieNode ( values, trieDict ))
-                    |> Maybe.withDefault (TrieNode trieDict)
-                    |> Just
+        head :: tail ->
+            -- If childTrie does not change then current childTrie reference should not change
+            case trie of
+                EmptyTrie ->
+                    EmptyTrie
 
-            else
-                Just aTrie
+                ValNode _ ->
+                    trie
 
+                TrieNode trieDict ->
+                    updateRemoveTrieDict
+                        trieDict
+                        head
+                        tail
+                        EmptyTrie
+                        (\trieDict2 -> TrieNode (Dict.remove head trieDict2))
+                        (\newChildTrie trieDict2 -> TrieNode (Dict.insert head newChildTrie trieDict2))
 
-{-| Remove the reference from any values in trie.
-Returns Nothing if the trie becomes empty from removal.
--}
-removeFromTrie : String -> List String -> String -> Trie a -> Maybe (Trie a)
-removeFromTrie keyHead keyTail ref aTrie =
-    case aTrie of
-        EmptyTrie ->
-            Nothing
-
-        ValNode _ ->
-            Just aTrie
-
-        TrieNode trieDict ->
-            removeFromTrieDict keyHead keyTail ref trieDict
-                |> Maybe.map (\d2 -> TrieNode d2)
-
-        ValTrieNode ( refValues, trieDict ) ->
-            removeFromTrieDict keyHead keyTail ref trieDict
-                |> Maybe.map (\d2 -> ValTrieNode ( refValues, d2 ))
-                |> Maybe.withDefault (ValNode refValues)
-                |> Just
-
-
-{-| Recursive remove the ref document from trie on given keyHead keyTail sequence.
--}
-removeFromTrieDict : String -> List String -> String -> Dict String (Trie a) -> Maybe (Dict String (Trie a))
-removeFromTrieDict keyHead keyTail ref trieDict =
-    case Dict.get keyHead trieDict of
-        Nothing ->
-            Just trieDict
-
-        justTrie ->
-            removeByChars keyTail ref justTrie
-                |> MaybeExtra.filter (isEmpty >> not)
-                |> Maybe.map (\a -> Dict.insert keyHead a trieDict)
+                ValTrieNode ( vals, trieDict ) ->
+                    updateRemoveTrieDict
+                        trieDict
+                        head
+                        tail
+                        (ValNode vals)
+                        (\trieDict2 -> ValTrieNode ( vals, Dict.remove head trieDict2 ))
+                        (\newChildTrie trieDict2 -> ValTrieNode ( vals, Dict.insert head newChildTrie trieDict2 ))
 
 
 {-| Return Trie node if found.
@@ -309,6 +348,8 @@ getNodeCore key trie =
 
 
 {-| Checks whether key is contained within a Trie.
+This means tha a "ref" exists at that key location.
+We don't check which ref just that there is one.
 -}
 has : String -> Trie a -> Bool
 has key trie =
